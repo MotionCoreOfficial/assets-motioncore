@@ -58,6 +58,8 @@ local motionTheme = [[
         Muted = "8D7AA8", Track = "35264F",
         Cloud = "FFFFFF", CloudAlpha = 1,
         Accent = "8B5CF6", AccentDark = "6D28D9",
+        Blue = "8B5CF6", BlueDark = "6D28D9", Good = "8B5CF6", GoodDark = "6D28D9",
+        Coin = "C4B5FD", CoinDark = "7C3AED", Risky = "A78BFA", RiskyDark = "6D28D9",
         Grass = "8B5CF6", GrassDark = "5B21B6",
         Brick = "2B1748", BrickDark = "160B29",
         Decor = { "Stars", "✦", "C4B5FD" },
@@ -82,6 +84,8 @@ end
 source = replacePlain(source, 'State.ThemeName = "Overworld"', 'State.ThemeName = "MotionCore"')
 source = replacePlain(source, 'name = "Overworld"', 'name = "MotionCore"')
 source = replacePlain(source, 'Theme.Apply(options.Theme or "Overworld")', 'Theme.Apply(options.Theme or "MotionCore")')
+source = replacePlain(source, 'Float.Sprite = Sprite.New(Float.Slot, "qblock", Float.Size)', 'Float.Sprite = Draw.Emblem(Float.Slot, Float.Size)')
+source = replacePlain(source, 'local icon = Sprite.New(field, "boo", 12)', 'local icon = Sprite.New(field, "star", 12)')
 
 local chunk, compileError = loadstring(source)
 if not chunk then
