@@ -212,15 +212,43 @@ local function sectionAPI(parent, name, opened, save, load)
             b.Text="  "..tostring(v or "Select").."  ▾"
         end
         choose(val)
+        local options=make("ScrollingFrame",{
+            BackgroundColor3=colors.border,BorderSizePixel=0,Position=UDim2.fromOffset(9,54),
+            Size=UDim2.new(1,-18,0,0),Visible=false,ScrollBarThickness=2,
+            ScrollBarImageColor3=colors.accent,AutomaticCanvasSize=Enum.AutomaticSize.Y,
+            CanvasSize=UDim2.new()
+        },r)
+        round(options,5)
+        layout(options,3,3)
+        local function show(open)
+            options.Visible=open
+            local h=math.min(#values,5)*29+6
+            options.Size=UDim2.new(1,-18,0,open and h or 0)
+            r.Size=UDim2.new(1,0,0,open and 56+h or 56)
+        end
+        local function render()
+            for _,child in ipairs(options:GetChildren()) do
+                if child:IsA("TextButton") then child:Destroy() end
+            end
+            for _,option in ipairs(values) do
+                local opt=button(options,tostring(option),26)
+                opt.MouseButton1Click:Connect(function()
+                    choose(option);save(key,val);safeCall(cfg.Callback,val);show(false)
+                end)
+            end
+        end
+        render()
         b.MouseButton1Click:Connect(function()
             if #values==0 then return end
-            local idx=table.find(values,val) or 0
-            choose(values[idx%#values+1])
-            save(key,val)
-            safeCall(cfg.Callback,val)
+            if not options.Visible then render() end
+            show(not options.Visible)
         end)
         if val~=cfg.Default then task.defer(safeCall,cfg.Callback,val) end
-        return {SetValues=function(_,arr) values=arr or {}; if not table.find(values,val) then choose(values[1]) end end,
+        return {SetValues=function(_,arr)
+                values=arr or {}
+                if not table.find(values,val) then choose(values[1]) end
+                render();show(false)
+            end,
             Set=function(_,v) choose(v);save(key,val);safeCall(cfg.Callback,val) end}
     end
     function api:AddTextInput(cfg)
@@ -406,6 +434,7 @@ function UI:Window(cfg)
     end
     function win:CreateHomeTab(data)
         local t=self:AddTab({Name=data.Name or "Dashboard"})
+        t.Button.LayoutOrder=-20
         local sec=t:AddSection({Name="Welcome",Opened=true})
         sec:AddLabel({Name=data.Content or "Motion Core"})
         sec:AddLabel({Name="Motion Core VD • UI v"..UI.Version})
