@@ -339,14 +339,18 @@ function UI:Window(cfg)
     },sg)
     round(root,12);stroke(root)
     local head=make("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,47)},root)
+    local logo=make("ImageLabel",{
+        BackgroundTransparency=1,Image="rbxassetid://111668536257891",
+        Size=UDim2.fromOffset(32,32),Position=UDim2.fromOffset(9,8)
+    },head)
     local brand=text(head,"MOTION CORE",15,true)
     brand.TextColor3=colors.accent
-    brand.Position=UDim2.fromOffset(13,5)
-    brand.Size=UDim2.new(1,-65,0,24)
+    brand.Position=UDim2.fromOffset(46,5)
+    brand.Size=UDim2.new(1,-95,0,24)
     local sub=text(head,cfg.Content or "Violence District",10)
     sub.TextColor3=colors.muted
-    sub.Position=UDim2.fromOffset(13,25)
-    sub.Size=UDim2.new(1,-65,0,14)
+    sub.Position=UDim2.fromOffset(46,25)
+    sub.Size=UDim2.new(1,-95,0,14)
     local close=button(head,"–",25)
     close.Size=UDim2.fromOffset(27,25)
     close.Position=UDim2.new(1,-37,0,10)
@@ -445,6 +449,11 @@ function UI:Window(cfg)
         b.Size=UDim2.fromOffset(39,39)
         b.BackgroundColor3=colors.accent
         b.TextSize=19
+        b.Text=""
+        local img=make("ImageLabel",{
+            BackgroundTransparency=1,Image=(icon and icon.Image) or "rbxassetid://111668536257891",
+            Size=UDim2.new(1,-7,1,-7),Position=UDim2.fromOffset(3.5,3.5)
+        },b)
         b.MouseButton1Click:Connect(function() self:SetVisible(not self.Visible) end)
         local moving,begin,pos
         b.InputBegan:Connect(function(i)
