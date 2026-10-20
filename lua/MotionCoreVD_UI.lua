@@ -3,7 +3,7 @@ local UIS = game:GetService("UserInputService")
 local Tween = game:GetService("TweenService")
 local Http = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local UI = {UserProfile = "", Version = "1.0.0"}
+local UI = {UserProfile = "", Version = "1.1.0"}
 local colors = {
     bg = Color3.fromRGB(12, 12, 18),
     panel = Color3.fromRGB(20, 20, 29),
@@ -196,9 +196,22 @@ local function sectionAPI(parent, name, opened, save, load)
     end
     function api:AddDropdown(cfg)
         local values=cfg.Values or {}
+        local multi=cfg.Multi==true
         local key,val=flagValue(cfg)
-        if type(val)=="table" then val=val[1] end
-        if val==nil then val=values[1] end
+        local selected={}
+        if multi then
+            if type(val)=="table" then
+                for _,item in ipairs(val) do selected[tostring(item)]=true end
+            elseif type(val)=="string" and val:sub(1,1)=="[" then
+                local ok,arr=pcall(function() return Http:JSONDecode(val) end)
+                if ok and type(arr)=="table" then
+                    for _,item in ipairs(arr) do selected[tostring(item)]=true end
+                end
+            end
+        else
+            if type(val)=="table" then val=val[1] end
+            if val==nil then val=values[1] end
+        end
         local r=row(cfg.Name,56)
         local lbl=text(r,cfg.Name,11)
         lbl.Position=UDim2.fromOffset(9,3)
@@ -207,19 +220,38 @@ local function sectionAPI(parent, name, opened, save, load)
         b.Position=UDim2.fromOffset(9,27)
         b.Size=UDim2.new(1,-18,0,23)
         b.TextXAlignment=Enum.TextXAlignment.Left
-        local function choose(v)
-            val=v
-            b.Text="  "..tostring(v or "Select").."  ▾"
-        end
-        choose(val)
         local options=make("ScrollingFrame",{
             BackgroundColor3=colors.border,BorderSizePixel=0,Position=UDim2.fromOffset(9,54),
             Size=UDim2.new(1,-18,0,0),Visible=false,ScrollBarThickness=2,
             ScrollBarImageColor3=colors.accent,AutomaticCanvasSize=Enum.AutomaticSize.Y,
             CanvasSize=UDim2.new()
         },r)
-        round(options,5)
-        layout(options,3,3)
+        round(options,5);layout(options,3,3)
+        local function selection()
+            if not multi then return val end
+            local result={}
+            for _,v in ipairs(values) do
+                if selected[tostring(v)] then table.insert(result,v) end
+            end
+            return result
+        end
+        local function display()
+            if multi then
+                local list=selection()
+                b.Text="  "..(#list>0 and table.concat(list,", ") or "None").."  ▾"
+            else
+                b.Text="  "..tostring(val or "Select").."  ▾"
+            end
+        end
+        local function persist()
+            local current=selection()
+            if multi then
+                save(key,Http:JSONEncode(current))
+            else
+                save(key,current)
+            end
+            safeCall(cfg.Callback,current)
+        end
         local function show(open)
             options.Visible=open
             local h=math.min(#values,5)*29+6
@@ -231,25 +263,51 @@ local function sectionAPI(parent, name, opened, save, load)
                 if child:IsA("TextButton") then child:Destroy() end
             end
             for _,option in ipairs(values) do
-                local opt=button(options,tostring(option),26)
+                local opt=button(options,"",26)
+                local key2=tostring(option)
+                local function setLabel()
+                    opt.Text=(multi and (selected[key2] and "  ✓  " or "  ○  ") or "  ")..key2
+                end
+                setLabel()
                 opt.MouseButton1Click:Connect(function()
-                    choose(option);save(key,val);safeCall(cfg.Callback,val);show(false)
+                    if multi then
+                        selected[key2]=not selected[key2]
+                        setLabel()
+                    else
+                        val=option
+                        show(false)
+                    end
+                    display();persist()
                 end)
             end
         end
-        render()
+        display();render()
         b.MouseButton1Click:Connect(function()
             if #values==0 then return end
             if not options.Visible then render() end
             show(not options.Visible)
         end)
-        if val~=cfg.Default then task.defer(safeCall,cfg.Callback,val) end
-        return {SetValues=function(_,arr)
+        if multi then
+            if #selection()>0 then task.defer(safeCall,cfg.Callback,selection()) end
+        elseif val~=cfg.Default then
+            task.defer(safeCall,cfg.Callback,val)
+        end
+        return {
+            SetValues=function(_,arr)
                 values=arr or {}
-                if not table.find(values,val) then choose(values[1]) end
-                render();show(false)
+                if not multi and not table.find(values,val) then val=values[1] end
+                display();render();show(false)
             end,
-            Set=function(_,v) choose(v);save(key,val);safeCall(cfg.Callback,val) end}
+            Set=function(_,v)
+                if multi then
+                    selected={}
+                    if type(v)=="table" then for _,item in ipairs(v) do selected[tostring(item)]=true end end
+                else
+                    val=v
+                end
+                display();render();persist()
+            end
+        }
     end
     function api:AddTextInput(cfg)
         local key,v=flagValue(cfg)
@@ -417,7 +475,28 @@ function UI:Window(cfg)
                 layout(sub,8)
                 local child={}
                 function child:AddSection(sc)
-                    return sectionAPI(sub,sc.Name,sc.Opened,win._save,win._load)
+                    sc=sc or {}
+                    return sectionAPI(sub,sc.Name or "Controls",sc.Opened,win._save,win._load)
+                end
+                local implicitSection=nil
+                local function ensureImplicit()
+                    if not implicitSection then
+                        implicitSection=sectionAPI(sub,c.Name or "Controls",true,win._save,win._load)
+                    end
+                    return implicitSection
+                end
+                function child:AddDivider(cfg)
+                    return ensureImplicit():AddDivider(cfg)
+                end
+                for _,method in ipairs({
+                    "AddToggle","AddSlider","AddDropdown","AddButton","AddColorPicker",
+                    "AddKeybind","AddLabel","AddTextInput"
+                }) do
+                    local name=method
+                    child[name]=function(_,cfg)
+                        local target=ensureImplicit()
+                        return target[name](target,cfg)
+                    end
                 end
                 local entry={Button=b,Panel=sub}
                 table.insert(p.SubPages,entry)
