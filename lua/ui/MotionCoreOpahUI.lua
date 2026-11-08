@@ -53,8 +53,8 @@ local function label(parent, text, size, bold, props)
     o.BackgroundTransparency = 1
     o.Text = tostring(text or "")
     font(o, size, bold)
-    o.TextXAlignment = Enum.TextXAlignment.Left
-    o.TextYAlignment = Enum.TextYAlignment.Center
+    o.TextXAlignment = (props and props.TextXAlignment) or Enum.TextXAlignment.Left
+    o.TextYAlignment = (props and props.TextYAlignment) or Enum.TextYAlignment.Center
     return o
 end
 local function button(parent, text, props)
@@ -578,9 +578,11 @@ function UI:CreateWindow(cfg)
                     Position=UDim2.fromOffset(46,33),Size=UDim2.new(1,-60,0,42),
                     TextYAlignment=Enum.TextYAlignment.Top,ZIndex=7})
                 description.TextColor3=Theme.Muted
+                local lastText
                 local function fitDescription(value)
                     content=tostring(value or "")
-                    if description.Text == content then return end
+                    if content == lastText then return end
+                    lastText = content
                     description.Text=content
                     local logicalLines = select(2, content:gsub("\n", "")) + 1
                     local approxLines = math.ceil(#content / 43)
