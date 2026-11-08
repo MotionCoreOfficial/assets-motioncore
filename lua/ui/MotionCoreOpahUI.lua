@@ -1,5 +1,5 @@
--- Motion Core | Opah UI
--- Independently implemented UI, designed to resemble the requested screenshot.
+-- Motion Core | Opah Classic UI v1.2
+-- Independent implementation inspired by the user-provided visual reference.
 -- Public UI-only module; no game automation logic and no dependency on outside hubs.
 
 local Players = game:GetService("Players")
@@ -9,11 +9,20 @@ local Theme = {
     Glass = Color3.fromRGB(31, 34, 57),
     Card = Color3.fromRGB(29, 31, 48),
     White = Color3.fromRGB(250, 251, 255),
-    Muted = Color3.fromRGB(225, 229, 246),
+    Muted = Color3.fromRGB(233, 237, 252),
     Line = Color3.fromRGB(116, 120, 160),
     Green = Color3.fromRGB(60, 255, 60),
 }
-local UI = {}
+local UI = { Version = "1.2.0" }
+
+local EASE = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local function animate(target, properties)
+    if target and target.Parent then
+        local tween = TweenService:Create(target, EASE, properties)
+        tween:Play()
+    end
+end
+
 local function new(class, parent, props)
     local obj = Instance.new(class)
     for key, value in pairs(props or {}) do obj[key] = value end
@@ -35,7 +44,7 @@ local function font(label, size, bold, color)
     label.TextSize = size or 14
     label.TextColor3 = color or Theme.White
     label.TextStrokeColor3 = Color3.fromRGB(3, 5, 16)
-    label.TextStrokeTransparency = 0.36
+    label.TextStrokeTransparency = bold and 0.36 or 0.29
     label.TextWrapped = true
     return label
 end
@@ -58,7 +67,7 @@ end
 local function card(parent, height, tint, transp)
     local f = new("Frame", parent, {
         BackgroundColor3 = tint or Theme.Card,
-        BackgroundTransparency = transp or 0.26,
+        BackgroundTransparency = transp or 0.22,
         BorderSizePixel = 0,
         Size = UDim2.new(1, -12, 0, height),
     })
@@ -118,6 +127,10 @@ local function mount(gui)
     if not parent then
         parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     end
+    local previous = parent:FindFirstChild(gui.Name)
+    if previous and previous ~= gui then
+        previous:Destroy()
+    end
     gui.Parent = parent
 end
 function UI:CreateWindow(cfg)
@@ -136,7 +149,9 @@ function UI:CreateWindow(cfg)
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.DisplayOrder = 600
     mount(gui)
-    local W, H = cfg.Width or 660, cfg.Height or 440
+    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+    local W = math.min(cfg.Width or 660, math.max(280, viewport.X - 24))
+    local H = math.min(cfg.Height or 440, math.max(275, viewport.Y - 108))
     local panel = new("Frame", gui, {
         AnchorPoint = Vector2.new(.5,.5),
         Position = UDim2.fromScale(.5,.5),
@@ -148,6 +163,13 @@ function UI:CreateWindow(cfg)
     })
     corner(panel, 20)
     border(panel, Color3.fromRGB(138,141,200), 0.58)
+    new("UIGradient", panel, {
+        Rotation = 145,
+        Color = ColorSequence.new(
+            Color3.fromRGB(60, 62, 99),
+            Color3.fromRGB(21, 23, 41)
+        ),
+    })
     if cfg.Background then
         local bg = new("ImageLabel", panel, {
             Size = UDim2.fromScale(1,1),
@@ -159,12 +181,26 @@ function UI:CreateWindow(cfg)
         })
         corner(bg, 20)
     end
+    -- A delicate glass scrim keeps the artwork visible without letting it
+    -- compete with small labels and status values.
+    new("Frame", panel, {
+        Name = "ReadabilityScrim",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Color3.fromRGB(9, 12, 24),
+        BackgroundTransparency = 0.88,
+        BorderSizePixel = 0,
+        ZIndex = 2,
+    })
     local top = new("Frame", panel, {
         Size = UDim2.new(1,0,0,45),
         BackgroundColor3 = Color3.fromRGB(38,43,76),
-        BackgroundTransparency = .22,
+        BackgroundTransparency = .16,
         BorderSizePixel = 0,
         ZIndex = 4,
+    })
+    new("UIGradient", top, {
+        Rotation = 0,
+        Color = ColorSequence.new(Color3.fromRGB(47, 49, 86), Color3.fromRGB(26, 28, 53)),
     })
     local traffic = {
         {Color3.fromRGB(255,90,86), 16},
@@ -193,12 +229,12 @@ function UI:CreateWindow(cfg)
         ZIndex = 6,
     })
     corner(icon, 14)
-    label(top, cfg.Title or "Opah Auto Win", 14, true, {
+    label(top, cfg.Title or "Opah Auto Win", 15, true, {
         Position = UDim2.fromOffset(128,7),
         Size = UDim2.new(1,-145,0,19),
         ZIndex = 6,
     })
-    label(top, cfg.SubTitle or "Motion Core", 11, false, {
+    label(top, cfg.SubTitle or "Motion Core", 12, false, {
         Position = UDim2.fromOffset(128,25),
         Size = UDim2.new(1,-145,0,15),
         ZIndex = 6,
@@ -208,7 +244,7 @@ function UI:CreateWindow(cfg)
         Position = UDim2.fromOffset(0,45),
         Size = UDim2.new(0,173,1,-45),
         BackgroundColor3 = Color3.fromRGB(24,25,44),
-        BackgroundTransparency = .36,
+        BackgroundTransparency = .24,
         BorderSizePixel = 0,
         ZIndex = 3,
     })
@@ -223,7 +259,7 @@ function UI:CreateWindow(cfg)
         ClearTextOnFocus = false,
         ZIndex = 5,
     })
-    font(search, 13, false)
+    font(search, 14, false)
     corner(search, 17)
     border(search, Theme.Line, .7)
     new("UIPadding", search, {PaddingLeft = UDim.new(0,12),PaddingRight = UDim.new(0,8)})
@@ -247,11 +283,20 @@ function UI:CreateWindow(cfg)
         Position = UDim2.fromOffset(10,4),Size = UDim2.fromOffset(30,33),ZIndex=5
     })
     profile.TextColor3 = accent
-    label(userArea, "Anonymous", 10, true, {
+    label(userArea, "Anonymous", 11, true, {
         Position = UDim2.fromOffset(43,6), Size = UDim2.new(1,-48,0,15), ZIndex=5
     })
-    label(userArea, "@hidden", 10, false, {
+    label(userArea, "@hidden", 11, false, {
         Position = UDim2.fromOffset(43,22), Size = UDim2.new(1,-48,0,13), ZIndex=5
+    })
+    new("Frame", panel, {
+        Name = "ContentContrast",
+        Position = UDim2.fromOffset(174, 45),
+        Size = UDim2.new(1, -174, 1, -45),
+        BackgroundColor3 = Color3.fromRGB(17, 20, 39),
+        BackgroundTransparency = 0.86,
+        BorderSizePixel = 0,
+        ZIndex = 2,
     })
     local pages = new("Frame", panel, {
         Position = UDim2.fromOffset(174,45),
@@ -291,9 +336,11 @@ function UI:CreateWindow(cfg)
         for _, entry in ipairs(window.Tabs) do
             local selected = entry == tab
             entry.Page.Visible = selected
-            entry.Button.BackgroundTransparency = selected and .55 or 1
             entry.Button.BackgroundColor3 = selected and accent or Theme.Card
-            entry.Button.TextColor3 = selected and Theme.White or Theme.Muted
+            animate(entry.Button, {
+                BackgroundTransparency = selected and 0.56 or 1,
+                TextColor3 = selected and Theme.White or Theme.Muted,
+            })
         end
         window._page=tab
         panel.Visible = true
@@ -358,7 +405,7 @@ function UI:CreateWindow(cfg)
             ZIndex=4,
         })
         list(scroller,10,11)
-        local heading=label(scroller,symbol.."  "..tostring(title),17,true,{
+        local heading=label(scroller,symbol.."  "..tostring(title),18,true,{
             Size=UDim2.new(1,-16,0,35),LayoutOrder=1,ZIndex=5
         })
         heading.TextColor3=Theme.White
@@ -371,8 +418,8 @@ function UI:CreateWindow(cfg)
             options=options or {}
             self.Count=self.Count+1
             local container=new("Frame",scroller,{
-                Size=UDim2.new(1,-12,0,0),AutomaticSize=Enum.AutomaticSize.Y,
-                BackgroundColor3=Theme.Card,BackgroundTransparency=.64,
+                Size=UDim2.new(1,-12,0,42),
+                BackgroundColor3=Theme.Card,BackgroundTransparency=.53,
                 BorderSizePixel=0,LayoutOrder=self.Count,ZIndex=5,
             })
             corner(container,14)
@@ -385,28 +432,31 @@ function UI:CreateWindow(cfg)
             local contents=new("Frame",container,{
                 Position=UDim2.fromOffset(7,41),
                 Size=UDim2.new(1,-14,0,0),
-                AutomaticSize=Enum.AutomaticSize.Y,
                 BackgroundTransparency=1,ZIndex=5,
             })
             list(contents,9,4)
-            local bottom=new("Frame",container,{Size=UDim2.new(1,0,0,8),
-                BackgroundTransparency=1,LayoutOrder=999})
-            -- AutoSize uses child bounds; the body is offset below the section header.
-            local function resize()
-                local height = contents:FindFirstChildOfClass("UIListLayout")
-                local h = height and height.AbsoluteContentSize.Y or 0
-                contents.Size=UDim2.new(1,-14,0,h+8)
-                container.Size=UDim2.new(1,-12,0,49+h+8)
+            local layout = contents:FindFirstChildOfClass("UIListLayout")
+            local expanded = options.Open ~= false
+            local function resize(animateResize)
+                local h = layout.AbsoluteContentSize.Y + 8
+                contents.Size = UDim2.new(1, -14, 0, h)
+                local size = UDim2.new(1, -12, 0, expanded and (49 + h) or 42)
+                if animateResize then
+                    animate(container, {Size = size})
+                else
+                    container.Size = size
+                end
+                contents.Visible = expanded
             end
-            local layout=contents:FindFirstChildOfClass("UIListLayout")
-            layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(resize)
-            task.defer(resize)
-            local expanded=true
+            layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                resize(false)
+            end)
+            task.defer(function() resize(false) end)
             bar.MouseButton1Click:Connect(function()
-                expanded=not expanded
-                contents.Visible=expanded
-                container.Size=UDim2.new(1,-12,0,expanded and 49+layout.AbsoluteContentSize.Y+8 or 42)
-                bar.Text="⌘   "..tostring(options.Name or "Section")..(expanded and "    ⌃" or "    ⌄")
+                expanded = not expanded
+                bar.Text = "⌘   "..tostring(options.Name or "Section")..
+                    (expanded and "    ⌃" or "    ⌄")
+                resize(true)
             end)
             local section={Contents=contents,Amount=0}
             local function nextOrder()
@@ -415,12 +465,12 @@ function UI:CreateWindow(cfg)
             end
             function section:Toggle(def)
                 def=def or {}
-                local f=card(contents,77,nil,.21)
+                local f=card(contents,80,nil,.16)
                 f.LayoutOrder=nextOrder()
-                label(f,def.Title or "Toggle",14,true,{
+                label(f,def.Title or "Toggle",15,true,{
                     Position=UDim2.fromOffset(46,14),Size=UDim2.new(1,-130,0,22),ZIndex=7
                 })
-                local desc=label(f,def.Desc or "",12,false,{
+                local desc=label(f,def.Desc or "",13,false,{
                     Position=UDim2.fromOffset(46,37),Size=UDim2.new(1,-124,0,30),ZIndex=7
                 })
                 desc.TextColor3=Theme.Muted
@@ -440,7 +490,7 @@ function UI:CreateWindow(cfg)
                 corner(knob,11)
                 local function paint()
                     switch.BackgroundColor3=enabled and accent or Color3.fromRGB(91,94,111)
-                    knob.Position=enabled and UDim2.fromOffset(24,3) or UDim2.fromOffset(3,3)
+                    animate(knob, {Position=enabled and UDim2.fromOffset(24,3) or UDim2.fromOffset(3,3)})
                 end
                 paint()
                 switch.MouseButton1Click:Connect(function()
@@ -456,10 +506,10 @@ function UI:CreateWindow(cfg)
                 local max=def.Value and def.Value.Max or 100
                 local step=def.Step or 1
                 local value=math.clamp(def.Value and def.Value.Default or min,min,max)
-                local f=card(contents,91,nil,.21);f.LayoutOrder=nextOrder()
-                label(f,def.Title or "Slider",14,true,{
+                local f=card(contents,94,nil,.16);f.LayoutOrder=nextOrder()
+                label(f,def.Title or "Slider",15,true,{
                     Position=UDim2.fromOffset(46,9),Size=UDim2.new(1,-130,0,23),ZIndex=7})
-                local desc=label(f,def.Desc or "",12,false,{
+                local desc=label(f,def.Desc or "",13,false,{
                     Position=UDim2.fromOffset(46,31),Size=UDim2.new(1,-124,0,24),ZIndex=7})
                 desc.TextColor3=Theme.Muted
                 label(f,"◷",22,true,{Position=UDim2.fromOffset(13,13),
@@ -518,24 +568,36 @@ function UI:CreateWindow(cfg)
             function section:Paragraph(def)
                 def=def or {}
                 local content=tostring(def.Desc or "")
-                local f=card(contents,78,Color3.fromRGB(32,94,79),.46)
+                local f=card(contents,80,Color3.fromRGB(24,65,67),.22)
                 f.LayoutOrder=nextOrder()
-                local title=label(f,def.Title or "",13,true,{
+                local title=label(f,def.Title or "",14,true,{
                     Position=UDim2.fromOffset(46,9),Size=UDim2.new(1,-60,0,23),ZIndex=7})
                 label(f,"ⓘ",22,true,{Position=UDim2.fromOffset(14,13),
                     Size=UDim2.fromOffset(28,28),ZIndex=7})
-                local description=label(f,content,12,false,{
-                    Position=UDim2.fromOffset(46,33),Size=UDim2.new(1,-60,0,39),
+                local description=label(f,content,13,false,{
+                    Position=UDim2.fromOffset(46,33),Size=UDim2.new(1,-60,0,42),
                     TextYAlignment=Enum.TextYAlignment.Top,ZIndex=7})
                 description.TextColor3=Theme.Muted
+                local function fitDescription(value)
+                    content=tostring(value or "")
+                    if description.Text == content then return end
+                    description.Text=content
+                    local logicalLines = select(2, content:gsub("\n", "")) + 1
+                    local approxLines = math.ceil(#content / 43)
+                    local lines = math.clamp(math.max(logicalLines,approxLines,2),2,12)
+                    local height = 43 + lines * 17
+                    description.Size=UDim2.new(1,-60,0,height-39)
+                    f.Size=UDim2.new(1,-12,0,height)
+                end
+                fitDescription(content)
                 local item={}
-                function item:SetDesc(s) description.Text=tostring(s or "") end
-                function item:Set(s) description.Text=tostring(s or "") end
+                function item:SetDesc(s) fitDescription(s) end
+                function item:Set(s) fitDescription(s) end
                 return item
             end
             function section:ProgressBar(def)
                 def=def or {}
-                local f=card(contents,77,nil,.24);f.LayoutOrder=nextOrder()
+                local f=card(contents,77,nil,.17);f.LayoutOrder=nextOrder()
                 label(f,def.Title or "Progress",13,true,{
                     Position=UDim2.fromOffset(14,9),Size=UDim2.new(1,-30,0,22),ZIndex=7})
                 label(f,def.Desc or "",11,false,{
@@ -556,7 +618,7 @@ function UI:CreateWindow(cfg)
             end
             function section:Dropdown(def)
                 def=def or {}
-                local f=card(contents,94,nil,.24);f.LayoutOrder=nextOrder()
+                local f=card(contents,97,nil,.17);f.LayoutOrder=nextOrder()
                 label(f,def.Title or "Events",13,true,{
                     Position=UDim2.fromOffset(14,8),Size=UDim2.new(1,-28,0,22),ZIndex=7})
                 local status=label(f,def.Desc or "",11,false,{
@@ -582,7 +644,7 @@ function UI:CreateWindow(cfg)
             end
             function section:Button(def)
                 def=def or {}
-                local f=card(contents,53,nil,.24);f.LayoutOrder=nextOrder()
+                local f=card(contents,53,nil,.17);f.LayoutOrder=nextOrder()
                 local action=button(f,"  "..tostring(def.Title or "Action"),{
                     Size=UDim2.fromScale(1,1),BackgroundTransparency=1,ZIndex=7,
                     TextXAlignment=Enum.TextXAlignment.Left
